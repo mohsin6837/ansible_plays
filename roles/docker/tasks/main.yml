@@ -1,0 +1,26 @@
+
+- name: Install Docker on Debian/Ubuntu
+  apt:
+    name: docker.io
+    state: present
+    update_cache: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Install Docker on RHEL/CentOS/Amazon
+  dnf:
+    name: docker
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Start and enable Docker
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add User to Docker Group
+  user:
+    name: "{{ ansible_user }}"
+    group: docker
+    append: yes
+    
