@@ -1,13 +1,13 @@
 - name: Install Java on Debian/Ubuntu
   apt:
-    name: openjdk-17-jdk
+    name: openjdk-21-jdk
     state: present
     update_cache: yes
   when: ansible_facts['os_family'] == "Debian"
 
 - name: Install Java on RHEL/CentOS/Amazon Linux
   dnf:
-    name: java-21-openjdk
+    name: java-21-amazon-corretto-devel
     state: present
   when: ansible_facts['os_family'] == "RedHat"
 

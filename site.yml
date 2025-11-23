@@ -1,5 +1,6 @@
-hosts: all
-become: yes
-roles:
-  - docker
-  - jenkins
+- name: Install Jenkins and Docker
+  hosts: app_servers
+  become: yes
+  roles:
+    - docker
+    - jenkins
