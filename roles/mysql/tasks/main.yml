@@ -1,0 +1,131 @@
+---
+# ============================================================
+#   Detect OS Type
+# ============================================================
+
+- name: Detect OS family
+  ansible.builtin.set_fact:
+    is_ubuntu: "{{ ansible_os_family == 'Debian' }}"
+    is_amz: "{{ ansible_distribution == 'Amazon' }}"
+
+# ============================================================
+#   Ubuntu - Add MySQL APT Repo
+# ============================================================
+
+- name: Download MySQL APT repo package (Ubuntu only)
+  ansible.builtin.get_url:
+    url: "https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb"
+    dest: "/tmp/mysql-apt-config.deb"
+    mode: "0644"
+  when: is_ubuntu
+
+- name: Install MySQL APT repository (Ubuntu only)
+  ansible.builtin.apt:
+    deb: "/tmp/mysql-apt-config.deb"
+  when: is_ubuntu
+
+- name: Update APT package cache (Ubuntu only)
+  ansible.builtin.apt:
+    update_cache: yes
+  when: is_ubuntu
+
+# ============================================================
+#   Amazon Linux 2023 - Add MySQL Yum Repo
+# ============================================================
+
+- name: Download MySQL Yum repo package (AL2023)
+  ansible.builtin.get_url:
+    url: "https://repo.mysql.com/mysql80-community-release-el9-1.noarch.rpm"
+    dest: "/tmp/mysql-release.rpm"
+    mode: "0644"
+  when: is_amz
+
+- name: Install MySQL Yum repo for AL2023
+  ansible.builtin.dnf:
+    name: "/tmp/mysql-release.rpm"
+    state: present
+  when: is_amz
+- name: Import MySQL GPG key (EL9)
+  ansible.builtin.rpm_key:
+    state: present
+    key: "https://repo.mysql.com/RPM-GPG-KEY-mysql-2023"
+  when: is_amz
+
+# ============================================================
+#   Install MySQL Server
+# ============================================================
+
+- name: Install MySQL Server (Ubuntu / AL2023)
+  ansible.builtin.package:
+    name: mysql-server
+    state: present
+
+# ============================================================
+#   Enable + Start MySQL Service
+# ============================================================
+
+- name: Enable and start MySQL service
+  ansible.builtin.systemd:
+    name: "{{ 'mysql' if is_ubuntu else 'mysqld' }}"
+    enabled: yes
+    state: started
+
+# ============================================================
+#   Python MySQL Client (Required for community.mysql modules)
+# ============================================================
+
+- name: Ensure pip3 is installed (AL2023)
+  ansible.builtin.dnf:
+    name: python3-pip
+    state: present
+  when: is_amz
+
+- name: Install PyMySQL on AL2023
+  ansible.builtin.pip:
+    name: PyMySQL
+    executable: pip3
+  when: is_amz
+
+- name: Install PyMySQL for Ubuntu
+  ansible.builtin.package:
+    name: python3-pymysql
+    state: present
+  when: is_ubuntu
+
+# ============================================================
+#   Secure MySQL - Set Root Password
+# ============================================================
+
+- name: Set MySQL root password
+  community.mysql.mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ '/var/run/mysqld/mysqld.sock' if is_ubuntu else '/var/lib/mysql/mysql.sock' }}"
+  ignore_errors: yes
+
+# ============================================================
+#   Create Database
+# ============================================================
+
+- name: Create MySQL database
+  community.mysql.mysql_db:
+    name: "{{ mysql_database }}"
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ '/var/run/mysqld/mysqld.sock' if is_ubuntu else '/var/lib/mysql/mysql.sock' }}"
+
+# ============================================================
+#   Create DB User
+# ============================================================
+
+- name: Create MySQL user with privileges
+  community.mysql.mysql_user:
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_user_password }}"
+    priv: "{{ mysql_database }}.*:ALL"
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ '/var/run/mysqld/mysqld.sock' if is_ubuntu else '/var/lib/mysql/mysql.sock' }}"
