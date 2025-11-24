@@ -1,11 +1,6 @@
 - name: Install Jenkins and Docker
   hosts: app_servers
   become: yes
-  vars:
-    mysql_root_password: "RootPass123!"
-    mysql_database: "appdb"
-    mysql_user: "appuser"
-    mysql_user_password: "UserPass123!"
   roles:
     - jenkins
     - docker

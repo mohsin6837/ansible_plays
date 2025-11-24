@@ -8,22 +8,6 @@
     is_ubuntu: "{{ ansible_os_family == 'Debian' }}"
     is_amz: "{{ ansible_distribution == 'Amazon' }}"
 
-# ============================================================
-#   Ubuntu - Add MySQL APT Repo
-# ============================================================
-
-- name: Download MySQL APT repo package (Ubuntu only)
-  ansible.builtin.get_url:
-    url: "https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb"
-    dest: "/tmp/mysql-apt-config.deb"
-    mode: "0644"
-  when: is_ubuntu
-
-- name: Install MySQL APT repository (Ubuntu only)
-  ansible.builtin.apt:
-    deb: "/tmp/mysql-apt-config.deb"
-  when: is_ubuntu
-
 - name: Update APT package cache (Ubuntu only)
   ansible.builtin.apt:
     update_cache: yes
