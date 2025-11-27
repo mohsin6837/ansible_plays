@@ -1,0 +1,63 @@
+---
+- name: Install nginx + docker
+  hosts: app_servers
+  become: yes
+  tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install nginx and docker
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - nginx
+        - docker.io
+
+    - name: Start nginx and docker service
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - nginx
+        - docker
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+---
+- name: Install mysql servers
+  hosts: db_servers
+  become: yes
+  tasks:
+    - name: Update APT package
+      apt:
+        update_cache: yes
+
+    - name: Install mysql server
+      apt:
+        name: mysql-server
+        state: present
+
+---
+- name: Run nginx container
+  hosts: app_servers
+  become: yes
+  tasks:
+    - name: Set variable
+      set_fact:
+        container_name: my_nginx
+
+    - name: Stop container if running
+      shell: docker stop {{ container_name }} || true
+
+    - name: Remove container if exists
+      shell: docker rm {{ container_name }} || true
+
+    - name: Run nginx container
+      shell: docker run -d --name {{ container_name }} -p 80:80 nginx
